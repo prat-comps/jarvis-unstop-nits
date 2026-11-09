@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>J.A.R.V.I.S. — Incident Intelligence</title>
+<style>
+  :root{
+    --bg:#070b14; --bg2:#0b1120; --panel:#0e1526; --panel2:#111b30;
+    --line:#1d2b45; --line2:#26374f;
+    --txt:#e6edf7; --dim:#8b9cb8; --dim2:#5f718e;
+    --cyan:#22d3ee; --cyan2:#0891b2; --blue:#3b82f6;
+    --red:#ff4d5e; --amber:#ffb020; --green:#22c55e; --violet:#a78bfa;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(900px 500px at 12% -8%, #0d2b3d 0%, transparent 60%),
+      radial-gradient(800px 500px at 92% 0%, #1a1233 0%, transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:14px; line-height:1.5; min-height:100vh;
+  }
+  .grid-bg{position:fixed;inset:0;pointer-events:none;opacity:.35;
+    background-image:linear-gradient(rgba(34,211,238,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.05) 1px,transparent 1px);
+    background-size:52px 52px;mask-image:radial-gradient(70% 60% at 50% 0%,#000 20%,transparent 85%);z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1560px;margin:0 auto;padding:18px 22px 60px}
+
+  /* ---------------- header ---------------- */
+  header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:18px}
+  .logo{width:44px;height:44px;flex:0 0 auto;filter:drop-shadow(0 0 10px rgba(34,211,238,.55))}
+  .brand h1{margin:0;font-size:19px;letter-spacing:5px;font-weight:700;color:#fff}
+  .brand p{margin:1px 0 0;font-size:10.5px;letter-spacing:2.1px;color:var(--cyan);text-transform:uppercase}
+  .spacer{flex:1 1 auto}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:11.5px;color:var(--dim)}
+  .chip b{color:var(--txt);font-variant-numeric:tabular-nums;font-size:13px}
+  .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .chip.warn .dot{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+  .chip.bad .dot{background:var(--red);box-shadow:0 0 8px var(--red)}
+  .btn{background:linear-gradient(180deg,#152238,#101a2c);color:var(--txt);border:1px solid var(--line2);border-radius:8px;padding:8px 13px;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:7px}
+  .btn:hover{border-color:var(--cyan2);color:#fff;box-shadow:0 0 0 3px rgba(34,211,238,.09)}
+  .btn.primary{background:linear-gradient(180deg,#0e7490,#0e5f76);border-color:#22d3ee66;color:#eafcff}
+  .btn.primary:hover{box-shadow:0 0 0 3px rgba(34,211,238,.18)}
+  .btn:disabled{opacity:.5;cursor:default}
+
+  /* ---------------- layout ---------------- */
+  .cols{display:grid;grid-template-columns:318px minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:1080px){.cols{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,rgba(17,27,48,.92),rgba(11,17,32,.92));border:1px solid var(--line);border-radius:12px;padding:15px 16px}
+  .card h3{margin:0 0 12px;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--dim);font-weight:700;display:flex;align-items:center;gap:8px}
+  .card h3 .bar{width:3px;height:13px;background:var(--cyan);border-radius:2px;box-shadow:0 0 8px var(--cyan)}
+
+  /* incident list */
+  .inc{padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:#0b1322;cursor:pointer;transition:.15s;margin-bottom:9px}
+  .inc:hover{border-color:#2c8fa4;background:#0d1a2b}
+  .inc.sel{border-color:var(--cyan);background:#0b2230;box-shadow:0 0 0 1px #22d3ee33 inset,0 6px 24px -12px #22d3ee}
+  .inc .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px}
+  .inc .id{font-family:var(--mono);font-size:10.5px;color:var(--dim2);letter-spacing:.6px}
+  .inc .t{font-size:12.5px;font-weight:600;color:#fff;line-height:1.35}
+  .inc .m{font-size:10.5px;color:var(--dim);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
+  .sev{font-size:9.5px;font-weight:800;letter-spacing:1px;padding:2px 7px;border-radius:4px;text-transform:uppercase;white-space:nowrap}
+  .sev.critical{background:#3b0f18;color:#ff8b96;border:1px solid #7f1d2b}
+  .sev.high{background:#3a2509;color:#ffcf7a;border:1px solid #7a5211}
+  .sev.medium{background:#0c2c3a;color:#7dd3fc;border:1px solid #155e75}
+  .empty{color:var(--dim2);font-size:12px;text-align:center;padding:18px 0}
+
+  /* kpi tiles */
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .kpi{background:#0b1322;border:1px solid var(--line);border-radius:9px;padding:10px 11px}
+  .kpi .v{font-size:18px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-.4px}
+  .kpi .l{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--dim2);margin-top:2px}
+  .kpi.acc .v{color:var(--cyan)} .kpi.bad .v{color:var(--red)} .kpi.warn .v{color:var(--amber)}
+
+  /* tabs */
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);padding:10px 13px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.15s;font-family:inherit}
+  .tab:hover{color:#fff}
+  .tab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
+  .tab .n{font-family:var(--mono);font-size:9.5px;background:#16233a;border-radius:9px;padding:1px 6px;margin-left:6px;color:var(--dim)}
+  .tab.on .n{background:#0e3b4a;color:#67e8f9}
+
+  /* hero */
+  .hero{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:16px}
+  @media (max-width:860px){.hero{grid-template-columns:1fr}}
+  .narr{font-size:13.5px;line-height:1.72;color:#c9d6e8}
+  .narr b,.narr strong{color:#fff}
+  .narr code{font-family:var(--mono);font-size:12px;background:#0a1a26;border:1px solid #1a3a4a;border-radius:4px;padding:1px 5px;color:#67e8f9}
+  .ring{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+  .ring svg{filter:drop-shadow(0 0 14px rgba(34,211,238,.35))}
+  .ring .lab{font-size:9.5px;letter-spacing:1.5px;color:var(--dim2);text-transform:uppercase}
+
+  .rc{display:flex;align-items:center;gap:14px;padding:14px;border-radius:10px;background:linear-gradient(90deg,rgba(255,77,94,.13),rgba(255,77,94,.02));border:1px solid #7f1d2b;margin-bottom:14px}
+  .rc .ico{width:40px;height:40px;border-radius:10px;background:#3b0f18;border:1px solid #7f1d2b;display:grid;place-items:center;flex:0 0 auto}
+  .rc .k{font-size:9.5px;letter-spacing:1.7px;color:#ff8b96;text-transform:uppercase;font-weight:700}
+  .rc .v{font-size:17px;font-weight:700;color:#fff;margin-top:3px;letter-spacing:-.2px}
+  .rc .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:3px}
+  .pulse{animation:pulse 2.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,94,.45)}50%{box-shadow:0 0 0 9px rgba(255,77,94,0)}}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;font-size:9.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--dim2);font-weight:700;padding:7px 9px;border-bottom:1px solid var(--line)}
+  td{padding:8px 9px;border-bottom:1px solid #141f33;color:#c3d0e2;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  tr:hover td{background:#0d1728}
+  .mono{font-family:var(--mono);font-size:11px}
+  .tag{display:inline-block;font-size:9.5px;padding:1px 6px;border-radius:4px;background:#16233a;border:1px solid var(--line2);color:var(--dim);letter-spacing:.4px}
+  .tag.root{background:#3b0f18;border-color:#7f1d2b;color:#ff8b96}
+  .tag.prop{background:#3a2509;border-color:#7a5211;color:#ffcf7a}
+  .tag.coin{background:#16233a;border-color:#2b3c58;color:#93a6c2}
+  .tag.ok{background:#0d2f1d;border-color:#1c6b3f;color:#7ee2a8}
+
+  /* bars */
+  .bar-row{margin-bottom:11px}
+  .bar-head{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;gap:10px}
+  .bar-head .nm{color:#e3ecf8;font-weight:600}
+  .bar-head .sc{font-family:var(--mono);font-size:11px;color:var(--cyan)}
+  .track{height:7px;background:#0a1424;border-radius:4px;overflow:hidden;border:1px solid #16233a}
+  .fill{height:100%;border-radius:4px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+  .fill.cy{background:linear-gradient(90deg,#0891b2,#22d3ee)}
+  .fill.rd{background:linear-gradient(90deg,#9f1239,#ff4d5e)}
+  .fill.am{background:linear-gradient(90deg,#b45309,#ffb020)}
+  .sub{font-size:10.5px;color:var(--dim2);margin-top:4px;font-family:var(--mono)}
+
+  /* svg graph */
+  #graph{width:100%;height:auto;display:block}
+  .node{cursor:pointer}
+  .node rect{transition:.15s}
+  .node:hover rect{filter:brightness(1.35)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--dim);margin-top:10px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
+
+  /* timeline */
+  .lane{display:grid;grid-template-columns:190px minmax(0,1fr);gap:12px;align-items:center;padding:6px 0;border-bottom:1px solid #131e31}
+  .lane:last-child{border-bottom:0}
+  .lane .nm{font-size:11.5px;color:#cddaeb;display:flex;align-items:center;gap:7px}
+  .lane .nm .hop{font-family:var(--mono);font-size:9px;color:var(--dim2)}
+  .track2{position:relative;height:26px;background:#0a1322;border-radius:6px;border:1px solid #141f33;overflow:hidden}
+  .ev{position:absolute;top:5px;width:3px;min-height:16px;height:16px;border-radius:2px;box-shadow:0 0 6px currentColor}
+  .axis{position:relative;height:18px;margin-left:202px}
+  .axis span{position:absolute;font-family:var(--mono);font-size:9.5px;color:var(--dim2);transform:translateX(-50%)}
+  .axline{position:absolute;top:0;bottom:0;width:1px;background:#1a2740}
+
+  /* recs */
+  .rec{border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:9px;background:#0b1322}
+  .rec .h{display:flex;gap:10px;align-items:flex-start}
+  .rec .step{width:22px;height:22px;border-radius:6px;background:#0e3b4a;color:#67e8f9;font-size:11px;font-weight:800;display:grid;place-items:center;flex:0 0 auto;font-family:var(--mono)}
+  .rec .a{font-size:12.5px;font-weight:650;color:#fff}
+  .rec .d{font-size:11.5px;color:var(--dim);margin-top:4px;line-height:1.6}
+  .rec .f{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}
+  .phase{font-size:9px;letter-spacing:1.1px;text-transform:uppercase;padding:2px 7px;border-radius:4px;font-weight:700}
+  .phase.mitigate{background:#3b0f18;color:#ff8b96}
+  .phase.stabilise{background:#3a2509;color:#ffcf7a}
+  .phase.prevent{background:#0c2c3a;color:#7dd3fc}
+  .phase.coordinate{background:#1e1b3a;color:#c4b5fd}
+
+  /* events */
+  .filters{display:flex;gap:8px;margin-bottom:11px;flex-wrap:wrap}
+  input[type=text],select{background:#0a1424;border:1px solid var(--line2);color:var(--txt);border-radius:7px;padding:7px 10px;font-size:12px;font-family:inherit;outline:none}
+  input[type=text]:focus,select:focus{border-color:var(--cyan2);box-shadow:0 0 0 3px rgba(34,211,238,.1)}
+  .scroll{max-height:520px;overflow:auto}
+  .scroll::-webkit-scrollbar{width:9px} .scroll::-webkit-scrollbar-thumb{background:#22314a;border-radius:5px}
+  .src{font-size:9.5px;letter-spacing:.4px;padding:1px 6px;border-radius:4px;border:1px solid var(--line2);background:#101c2f;color:#9db0cc;font-family:var(--mono)}
+  .noisecard{border:1px dashed #2b3c58;border-radius:9px;padding:12px;background:#0a1120;margin-bottom:12px}
+  .muted{color:var(--dim2)}
+  .hide{display:none!important}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);background:#0e3b4a;border:1px solid var(--cyan2);color:#eafcff;padding:10px 18px;border-radius:9px;font-size:12.5px;opacity:0;transition:.25s;z-index:99;box-shadow:0 12px 40px -12px #000}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+  .mini{font-size:10.5px;color:var(--dim2);margin-top:8px;line-height:1.55}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="wrap">
+
+  <header>
+    <svg class="logo" viewBox="0 0 64 64" fill="none">
+      <circle cx="32" cy="32" r="29" stroke="#22d3ee" stroke-width="1.4" opacity=".45"/>
+      <circle cx="32" cy="32" r="21" stroke="#22d3ee" stroke-width="1.6" opacity=".75"/>
+      <circle cx="32" cy="32" r="9.5" stroke="#67e8f9" stroke-width="2.2" fill="#0a2a36"/>
+      <circle cx="32" cy="32" r="3.4" fill="#a5f3fc"/>
+      <g stroke="#22d3ee" stroke-width="2.2" stroke-linecap="round" opacity=".9">
+        <path d="M32 3v9M32 52v9M3 32h9M52 32h9"/>
+        <path d="M11.5 11.5l6.4 6.4M46.1 46.1l6.4 6.4M52.5 11.5l-6.4 6.4M17.9 46.1l-6.4 6.4" opacity=".55"/>
+      </g>
+    </svg>
+    <div class="brand">
+      <h1>J.A.R.V.I.S.</h1>
+      <p>Justified Analysis, Reasoning &amp; Visualization of Incident Systems</p>
+    </div>
+    <div class="spacer"></div>
+    <div class="chips" id="chips"></div>
+  </header>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+    <button class="btn primary" id="btnSim">▶ Simulate live burst</button>
+    <button class="btn" id="btnAppend">＋ Append burst</button>
+    <label class="btn" style="position:relative;overflow:hidden">
+      ⬆ Upload logs
+      <input type="file" id="fileIn" accept=".csv,.json,.jsonl,.log,.txt" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+    </label>
+    <button class="btn" id="btnSample">⬇ Download sample log</button>
+    <button class="btn" id="btnReset">⟲ Reset to scenario</button>
+    <div class="spacer"></div>
+    <span class="mono" id="srcLabel" style="color:var(--dim2);font-size:11px"></span>
+    <button class="btn" id="btnExport">⤓ Export report</button>
+  </div>
+
+  <div class="cols">
+    <!-- ------------- sidebar ------------- -->
+    <aside style="display:grid;gap:14px">
+      <div class="card">
+        <h3><span class="bar"></span>Detected incidents</h3>
+        <div id="incList"><div class="empty">analysing…</div></div>
+      </div>
+      <div class="card">
+        <h3><span class="bar"></span>Pipeline</h3>
+        <div class="kpis" id="kpis"></div>
+        <div class="mini" id="pipeNote"></div>
+      </div>
+      <div class="card">
+        <h3><span class="bar"></span>Data sources</h3>
+        <div id="srcList" style="display:grid;gap:7px"></div>
+      </div>
+    </aside>
+
+    <!-- ------------- main ------------- -->
+    <main>
+      <nav class="tabs" id="tabs">
+        <button class="tab on" data-t="overview">Overview</button>
+        <button class="tab" data-t="topology">Topology</button>
+        <button class="tab" data-t="timeline">Timeline</button>
+        <button class="tab" data-t="rootcause">Root Cause</button>
+        <button class="tab" data-t="impact">Impact</button>
+        <button class="tab" data-t="recs">Recommendations <span class="n" id="nRecs">0</span></button>
+        <button class="tab" data-t="events">Events <span class="n" id="nEvents">0</span></button>
+      </nav>
+
+      <!-- overview -->
+      <section id="p-overview" class="pane">
+        <div class="card" style="margin-bottom:16px">
+          <h3><span class="bar"></span>Incident analysis</h3>
+          <div class="hero">
+            <div>
+              <div class="rc pulse" id="rcHero"></div>
+              <div class="narr" id="narrative"></div>
+            </div>
+            <div class="ring" id="ring"></div>
+          </div>
+        </div>
+        <div class="two">
+          <div class="card">
+            <h3><span class="bar"></span>Why these signals are one incident</h3>
+            <div id="corrWhy"></div>
+          </div>
+          <div class="card">
+            <h3><span class="bar"></span>Suppressed as noise</h3>
+            <div id="noiseBox"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- topology -->
+      <section id="p-topology" class="pane hide">
+        <div class="card">
+          <h3><span class="bar"></span>Service dependency graph — blast radius of the root cause</h3>
+          <div id="graphWrap"></div>
+          <div class="legend">
+            <span><i style="background:#ff4d5e"></i>root cause</span>
+            <span><i style="background:#ffb020"></i>propagated (on dependency path)</span>
+            <span><i style="background:#5b6b86"></i>coincidental / unaffected</span>
+            <span><i style="background:#22d3ee"></i>healthy</span>
+          </div>
+          <div class="mini">Click any node to inspect the events it emitted in this incident. Edge direction: <span class="mono">source → dependency</span>; a fault flows opposite to the arrow.</div>
+        </div>
+      </section>
+
+      <!-- timeline -->
+      <section id="p-timeline" class="pane hide">
+        <div class="card">
+          <h3><span class="bar"></span>Incident timeline — how it started and spread</h3>
+          <div id="axisTop"></div>
+          <div id="lanes"></div>
+          <div class="mini">Each tick is one correlated event. Lanes are ordered by first appearance; the top lane is where the incident began.</div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h3><span class="bar"></span>Propagation steps</h3>
+          <div id="steps"></div>
+        </div>
+      </section>
+
+      <!-- root cause -->
+      <section id="p-rootcause" class="pane hide">
+        <div class="two">
+          <div class="card">
+            <h3><span class="bar"></span>Candidate ranking</h3>
+            <div id="cands"></div>
+            <div class="mini">Score = 0.30·earliness + 0.20·severity + 0.25·topology fit + 0.15·anomaly + 0.10·amplification</div>
+          </div>
+          <div class="card">
+            <h3><span class="bar"></span>Evidence for the selected root cause</h3>
+            <div id="evidence"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h3><span class="bar"></span>Rejected alternatives — why not them</h3>
+          <div id="rejected"></div>
+        </div>
+      </section>
+
+      <!-- impact -->
+      <section id="p-impact" class="pane hide">
+        <div class="two">
+          <div class="card">
+            <h3><span class="bar"></span>Affected services</h3>
+            <div id="impactTable"></div>
+          </div>
+          <div class="card">
+            <h3><span class="bar"></span>Business impact</h3>
+            <div id="bizImpact"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h3><span class="bar"></span>Not impact — coincidence</h3>
+          <div id="coinTable"></div>
+        </div>
+      </section>
+
+      <!-- recommendations -->
+      <section id="p-recs" class="pane hide">
+        <div class="card" style="margin-bottom:16px">
+          <h3><span class="bar"></span>Recommended actions</h3>
+          <div id="recs"></div>
+        </div>
+        <div class="card">
+          <h3><span class="bar"></span>Recovery &amp; verification playbook</h3>
+          <div id="recovery"></div>
+        </div>
+      </section>
+
+      <!-- events -->
+      <section id="p-events" class="pane hide">
+        <div class="card">
+          <h3><span class="bar"></span>Correlated event stream</h3>
+          <div class="filters">
+            <input type="text" id="q" placeholder="search message / service / trace…" style="flex:1;min-width:200px">
+            <select id="fSev">
+              <option value="">all severities</option>
+              <option value="critical">critical</option>
+              <option value="error">error</option>
+              <option value="warning">warning</option>
+              <option value="info">info</option>
+            </select>
+            <select id="fSrc"><option value="">all sources</option></select>
+          </div>
+          <div class="scroll" id="evTable"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================ state ============================ */
+const S = { data:null, sel:null, tab:'overview', q:'', fSev:'', fSrc:'', node:null };
+const $ = s => document.querySelector(s);
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = n => new Intl.NumberFormat('en-IN').format(Math.round(n||0));
+const hhmmss = iso => { try{ const d=new Date(iso); return d.toISOString().slice(11,19);}catch(e){return '--:--:--';} };
+const sevColor = s => ({critical:'#ff4d5e',error:'#f97316',warning:'#ffb020',info:'#22d3ee'}[s]||'#5f718e');
+
+function toast(msg, ms=2200){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(t._x); t._x=setTimeout(()=>t.classList.remove('on'), ms);
+}
+
+/* ============================ load ============================ */
+async function load(){
+  const r = await fetch('/api/state');
+  S.data = await r.json();
+  const list = S.data.result.incidents || [];
+  if(!S.sel || !list.find(i=>i.id===S.sel)) S.sel = list[0]?.id || null;
+  renderAll();
+}
+const cur = () => (S.data?.result?.incidents||[]).find(i=>i.id===S.sel) || null;
+
+/* ============================ header chips ============================ */
+function renderChips(){
+  const s = S.data.result.summary;
+  const crit = s.critical||0;
+  $('#chips').innerHTML = `
+    <div class="chip"><span class="dot"></span>System <b>online</b></div>
+    <div class="chip ${crit?'bad':''}"><span class="dot"></span>Incidents <b>${s.incidents}</b></div>
+    <div class="chip warn"><span class="dot"></span>Suppressed <b>${s.noise_events||0}</b></div>
+    <div class="chip"><span class="dot"></span>Events <b>${s.events}</b></div>
+    <div class="chip"><span class="dot"></span>Sources <b>${s.sources.length}</b></div>`;
+  $('#srcLabel').textContent = S.data.label ? 'source: '+S.data.label : '';
+}
+
+/* ============================ sidebar ============================ */
+function renderSidebar(){
+  const list = S.data.result.incidents || [];
+  $('#incList').innerHTML = list.length ? list.map(i=>`
+    <div class="inc ${i.id===S.sel?'sel':''}" data-inc="${i.id}">
+      <div class="top">
+        <span class="id">${i.id}</span>
+        <span class="sev ${i.severity}">${i.severity}</span>
+      </div>
+      <div class="t">${esc(i.title)}</div>
+      <div class="m">
+        <span class="mono">${hhmmss(i.start)}</span>
+        <span>${i.event_count} events</span>
+        <span>${(i.confidence*100).toFixed(0)}% conf</span>
+      </div>
+    </div>`).join('') : '<div class="empty">No incident crossed the correlation threshold.<br>Try “Simulate live burst”.</div>';
+  document.querySelectorAll('[data-inc]').forEach(el=>el.onclick=()=>{S.sel=el.dataset.inc; renderAll();});
+
+  const s = S.data.result.summary;
+  const inc = cur();
+  $('#kpis').innerHTML = `
+    <div class="kpi acc"><div class="v">${s.events}</div><div class="l">events ingested</div></div>
+    <div class="kpi"><div class="v">${s.correlated_events||0}</div><div class="l">correlated</div></div>
+    <div class="kpi warn"><div class="v">${s.noise_events||0}</div><div class="l">noise suppressed</div></div>
+    <div class="kpi bad"><div class="v">${inc?inc.impact.affected_count:0}</div><div class="l">services affected</div></div>`;
+  $('#pipeNote').innerHTML = inc
+    ? `6 stages: ingest → score → cluster → root cause → impact → recommend.<br>Correlation window <span class="mono">4 min</span>, min link strength <span class="mono">0.34</span>, noise gate <span class="mono">warning+</span>.`
+    : '';
+
+  const srcs = {};
+  (S.data.result.events||[]).forEach(e=>{ srcs[e.source]=(srcs[e.source]||0)+1; });
+  $('#srcList').innerHTML = Object.entries(srcs).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="src">${esc(k)}</span>
+      <span class="mono" style="color:var(--dim)">${v}</span>
+    </div>`).join('') || '<div class="empty">—</div>';
+}
+
+/* ============================ overview ============================ */
+function renderOverview(){
+  const i = cur();
+  if(!i){
+    $('#rcHero').innerHTML = '<div class="k">no incident</div><div class="v">Nothing correlated yet</div>';
+    $('#narrative').innerHTML = '<span class="muted">Ingest or simulate events to see the analysis.</span>';
+    $('#ring').innerHTML=''; $('#corrWhy').innerHTML='<div class="empty">—</div>'; $('#noiseBox').innerHTML='<div class="empty">—</div>';
+    return;
+  }
+  const rc = i.root_cause;
+  $('#rcHero').innerHTML = `
+    <div class="ico">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4d5e" stroke-width="2">
+        <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="4"/>
+      </svg>
+    </div>
+    <div>
+      <div class="k">Likely root cause · rank 1</div>
+      <div class="v">${esc(rc.name)}</div>
+      <div class="s">${esc(rc.service)} · score ${rc.score.toFixed(2)} · explains ${rc.covers_pct}% of events</div>
+    </div>`;
+
+  $('#narrative').innerHTML = mdToHtml(i.narrative);
+
+  const pct = Math.round(i.confidence*100);
+  const R=54, C=2*Math.PI*R;
+  $('#ring').innerHTML = `
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      <circle cx="70" cy="70" r="${R}" fill="none" stroke="#16233a" stroke-width="9"/>
+      <circle cx="70" cy="70" r="${R}" fill="none" stroke="#22d3ee" stroke-width="9" stroke-linecap="round"
+        stroke-dasharray="${C}" stroke-dashoffset="${C*(1-i.confidence)}" transform="rotate(-90 70 70)"/>
+      <text x="70" y="66" text-anchor="middle" fill="#fff" font-size="26" font-weight="700" font-family="monospace">${pct}%</text>
+      <text x="70" y="86" text-anchor="middle" fill="#8b9cb8" font-size="9" letter-spacing="1.4">CONFIDENCE</text>
+    </svg>
+    <div class="lab">root-cause certainty</div>
+    <div class="mini" style="text-align:center;margin-top:2px">${i.event_count} events · ${i.duration_minutes} min · ${i.sources.length} sources</div>`;
+
+  // why correlated
+  const linkSample = (i.links||[]).slice(0,5);
+  const services = {};
+  i.events.forEach(e=>{ services[e.service]=(services[e.service]||0)+1; });
+  $('#corrWhy').innerHTML = `
+    <div style="display:grid;gap:8px;font-size:12px">
+      <div><span class="tag">time</span> ${i.event_count} signals fall inside a <b>${i.duration_minutes} min</b> window (linked when Δt ≤ 4 min)</div>
+      <div><span class="tag">topology</span> ${i.impact.blast_radius.length} services sit downstream of the root in the dependency graph</div>
+      <div><span class="tag">trace</span> shared trace IDs tie payment failures back to the same upstream timeout</div>
+      <div><span class="tag">pattern</span> repeated failure signatures: ${[...new Set(i.events.flatMap(e=>e.patterns))].slice(0,4).map(p=>`<span class="mono">${p}</span>`).join(' · ')||'—'}</div>
+    </div>
+    <div style="margin-top:12px">${linkSample.map(l=>`
+      <div class="mono" style="font-size:10.5px;color:var(--dim);display:flex;gap:8px;justify-content:space-between">
+        <span>${l.a} ↔ ${l.b}</span><span>Δt ${l.gap_min}m · strength ${l.strength}</span>
+      </div><div class="track" style="margin:3px 0 7px"><div class="fill cy" style="width:${l.strength*100}%"></div></div>`).join('')}
+    </div>`;
+
+  const sup = (S.data.result.suppressed||[])[0];
+  $('#noiseBox').innerHTML = sup ? `
+    <div class="noisecard">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <b style="color:#fff">${sup.event_count} events suppressed</b>
+        <span class="tag">${sup.services.length} services</span>
+      </div>
+      <div class="mini" style="margin:0 0 8px">${esc(sup.reason)}</div>
+      <div class="mono" style="font-size:10.5px;color:var(--dim2)">${sup.services.map(s=>esc(s)).join(' · ')}</div>
+      <div class="mini" style="margin-top:8px">Example: “${esc(sup.headline)}”</div>
+    </div>` : '<div class="empty">No noise in this window — every event was linked to an incident.</div>';
+}
+function mdToHtml(t){
+  return esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>');
+}
+
+/* ============================ topology graph ============================ */
+function renderTopology(){
+  const topo = S.data.topology, inc = cur();
+  const nodes = topo.nodes, edges = topo.edges;
+  const deps = {}; nodes.forEach(n=>deps[n.key]=[]);
+  edges.forEach(e=>{ if(deps[e.source]) deps[e.source].push(e.target); });
+
+  // level = longest chain of dependencies below a node
+  const memo = {};
+  const level = k => {
+    if(memo[k]!=null) return memo[k];
+    memo[k]=0;
+    const ds = deps[k]||[];
+    memo[k] = ds.length ? 1 + Math.max(...ds.map(level)) : 0;
+    return memo[k];
+  };
+  nodes.forEach(n=>level(n.key));
+  const maxL = Math.max(...nodes.map(n=>memo[n.key]||0));
+  const byL = {};
+  nodes.forEach(n=>{ const l=(memo[n.key]||0); (byL[l]=byL[l]||[]).push(n); });
+
+  const role = {}, affected = {}, coinc = {}, nodes_ev = {};
+  if(inc){
+    role[inc.root_cause.service]='root';
+    inc.impact.affected_services.forEach(a=>affected[a.service]=a.impact_score);
+    (inc.impact.coincidental_services||[]).forEach(a=>coinc[a.service]=1);
+    inc.timeline.forEach(t=>{ role[t.service] = role[t.service] || (t.role==='propagated'?'prop':t.role==='coincidental'?'coin':'root'); nodes_ev[t.service]=t.events; });
+  }
+  // left-to-right layered layout: depth 0 (no dependencies, e.g. the DB host) on the left,
+  // edge/front-end services on the right. A fault flows left -> right.
+  const W=1240, colW=176, colGap=42, padX=26, padY=24, rowH=42, rowGap=16;
+  const depthKeys = Object.keys(byL).map(Number).sort((a,b)=>a-b);
+  const maxRows = Math.max(...depthKeys.map(d=>byL[d].length));
+  const H = padY*2 + maxRows*(rowH+rowGap) - rowGap;
+  const colStep = (W - padX*2 - colW) / Math.max(1, depthKeys.length-1);
+  const pos = {};
+  depthKeys.forEach((d,i)=>{
+    const arr = byL[d];
+    const colH = arr.length*(rowH+rowGap) - rowGap;
+    const y0 = (H - colH)/2;
+    arr.forEach((n,idx)=>{
+      pos[n.key] = { x: padX + i*colStep, y: y0 + idx*(rowH+rowGap), cx: colW };
+    });
+  });
+
+  let ed='';
+  edges.forEach(e=>{
+    const a=pos[e.source], b=pos[e.target]; if(!a||!b) return;
+    const on = inc && role[e.target]!=='coin' && role[e.source]!=='coin' && role[e.source] && role[e.target];
+    const rootEdge = inc && (e.source===inc.root_cause.service || e.target===inc.root_cause.service);
+    const col = rootEdge?'#ff4d5e': on?'#ffb02066':'#25344c';
+    const wid = rootEdge?2.4:1.2;
+    const x1=a.x+colW, y1=a.y+rowH/2, x2=b.x, y2=b.y+rowH/2;
+    const mx=(x1+x2)/2;
+    ed += `<path d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}"
+      fill="none" stroke="${col}" stroke-width="${wid}" ${on||rootEdge?'':'stroke-dasharray="3 4"'} marker-end="url(#ar${rootEdge?'r':on?'o':'n'})"/>`;
+  });
+
+  let nd='';
+  nodes.forEach(n=>{
+    const p=pos[n.key]; if(!p) return;
+    const r = role[n.key];
+    const stroke = r==='root'?'#ff4d5e': r==='prop'?'#ffb020': r==='coin'?'#4f6076':'#1c5f70';
+    const fill = r==='root'?'#2a0a11': r==='prop'?'#241a08': r==='coin'?'#111a2b':'#0a1c26';
+    const txt = r==='root'?'#ff8b96': r==='prop'?'#ffcf7a': r==='coin'?'#93a6c2':'#a8c4d8';
+    const ev = nodes_ev[n.key];
+    const short = n.name.length>22 ? n.name.slice(0,21)+'…' : n.name;
+    nd += `<g class="node" data-node="${n.key}">
+      <rect x="${p.x}" y="${p.y}" width="${colW}" height="${rowH}" rx="7" fill="${fill}" stroke="${stroke}" stroke-width="${r==='root'?2:1.2}"/>
+      ${r==='root'?`<circle cx="${p.x+10}" cy="${p.y+rowH/2}" r="3.2" fill="#ff4d5e"><animate attributeName="opacity" values="1;.2;1" dur="1.8s" repeatCount="indefinite"/></circle>`:''}
+      <text x="${p.x+20}" y="${p.y+17}" fill="${txt}" font-size="10.5" font-weight="600">${esc(short)}</text>
+      <text x="${p.x+20}" y="${p.y+30}" fill="#5f718e" font-size="8" font-family="monospace">${esc(n.key.length>19?n.key.slice(0,18):n.key)}${ev?` · ${ev}ev`:''}</text>
+    </g>`;
+  });
+
+  const markers = ['n','o','r'].map(k=>`<marker id="ar${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="${k==='r'?'#ff4d5e':k==='o'?'#ffb020':'#3a4c68'}"/></marker>`).join('');
+
+  $('#graphWrap').innerHTML = `<svg id="graph" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+    <defs>${markers}</defs>${ed}${nd}</svg>
+    ${S.node?nodeDetail(S.node):''}`;
+  document.querySelectorAll('[data-node]').forEach(el=>el.onclick=()=>{ S.node = S.node===el.dataset.node?null:el.dataset.node; renderTopology(); });
+}
+function nodeDetail(key){
+  const inc=cur(); if(!inc) return '';
+  const evs = inc.events.filter(e=>e.service===key);
+  const n = S.data.topology.nodes.find(x=>x.key===key)||{};
+  return `<div class="card" style="margin-top:14px">
+    <h3><span class="bar"></span>${esc(n.name||key)} <span class="mono" style="color:var(--dim2);letter-spacing:0;text-transform:none">${esc(key)}</span></h3>
+    <div class="mini" style="margin:0 0 10px">tier ${n.tier} · criticality ${n.criticality}/5 · baseline exposure ${fmt(n.users_exposed)} users · ${evs.length} correlated events</div>
+    ${evs.length? evs.slice(0,12).map(e=>`<div style="display:flex;gap:9px;padding:5px 0;border-bottom:1px solid #131e31;font-size:11.5px">
+        <span class="mono" style="color:var(--dim2);flex:0 0 62px">${hhmmss(e.ts)}</span>
+        <span style="flex:0 0 74px;color:${sevColor(e.severity)};font-size:10px;text-transform:uppercase;letter-spacing:.5px">${e.severity}</span>
+        <span style="color:#c3d0e2">${esc(e.message)}</span></div>`).join('')
+      : '<div class="empty">No correlated events — this service lies outside the incident path.</div>'}
+  </div>`;
+}
+
+/* ============================ timeline ============================ */
+function renderTimeline(){
+  const inc=cur();
+  if(!inc){ $('#lanes').innerHTML='<div class="empty">—</div>'; $('#steps').innerHTML=''; $('#axisTop').innerHTML=''; return; }
+  const t0=new Date(inc.start).getTime(), t1=new Date(inc.end).getTime();
+  const span=Math.max(1,t1-t0);
+  const D=4;
+  const lanes = inc.timeline.slice().sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+  $('#axisTop').innerHTML = `<div class="axis">${Array.from({length:D+1},(_,k)=>{
+      const frac=k/D; const ts=new Date(t0+span*frac);
+      return `<span style="left:${frac*100}%">${ts.toISOString().slice(11,19)}</span>`
+    }).join('')}</div>`;
+  $('#lanes').innerHTML = lanes.map(l=>{
+    const evs = inc.events.filter(e=>e.service===l.service);
+    const ticks = evs.map(e=>{
+      const left = Math.max(0,Math.min(100, (new Date(e.ts).getTime()-t0)/span*100));
+      return `<div class="ev" title="${esc(e.message)}" style="left:${left}%;background:${sevColor(e.severity)}"></div>`;
+    }).join('');
+    const c = l.role==='ROOT CAUSE'?'#ff8b96':l.role==='propagated'?'#ffcf7a':'#93a6c2';
+    return `<div class="lane">
+      <div class="nm" style="color:${c}">
+        <span style="width:6px;height:6px;border-radius:50%;background:${c};flex:0 0 auto"></span>
+        ${esc(l.service_name.length>26?l.service_name.slice(0,25)+'…':l.service_name)}
+        ${l.hops_from_root!=null?`<span class="hop">+${l.hops_from_root}h</span>`:''}
+      </div>
+      <div class="track2">${ticks}</div>
+    </div>`;
+  }).join('');
+
+  $('#steps').innerHTML = `<table><thead><tr>
+      <th>#</th><th>offset</th><th>time</th><th>service</th><th>role</th><th>hops</th><th>events</th><th>headline signal</th>
+    </tr></thead><tbody>${lanes.map((l,idx)=>`<tr>
+      <td class="mono">${idx+1}</td>
+      <td class="mono" style="color:${l.offset_min===0?'#ff8b96':'#8b9cb8'}">+${l.offset_min}m</td>
+      <td class="mono">${hhmmss(l.ts)}</td>
+      <td>${esc(l.service_name)}</td>
+      <td><span class="tag ${l.role==='ROOT CAUSE'?'root':l.role==='propagated'?'prop':'coin'}">${l.role}</span></td>
+      <td class="mono">${l.hops_from_root??'—'}</td>
+      <td class="mono">${l.events}</td>
+      <td style="color:#a9b9cf;font-size:11.5px">${esc(l.headline)}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+/* ============================ root cause ============================ */
+function renderRootCause(){
+  const inc=cur();
+  if(!inc){ $('#cands').innerHTML='<div class="empty">—</div>'; $('#evidence').innerHTML=''; $('#rejected').innerHTML=''; return; }
+  $('#cands').innerHTML = inc.candidates.map((c,k)=>`
+    <div class="bar-row">
+      <div class="bar-head">
+        <span class="nm">${k===0?'<span class="tag root" style="margin-right:6px">RANK 1</span>':''}${esc(c.name)}</span>
+        <span class="sc">${c.score.toFixed(3)}</span>
+      </div>
+      <div class="track"><div class="fill ${k===0?'rd':k===1?'am':'cy'}" style="width:${c.score*100}%"></div></div>
+      <div class="sub">${esc(c.service)} · ${c.events} events · explains ${c.covers_pct}% · earliest ${hhmmss(c.earliest)}</div>
+      <div class="sub" style="color:var(--dim2)">earliness ${c.earliness} · severity ${c.severity} · topo ${c.topology_fit} · anomaly ${c.anomaly} · amp ${c.amplification}</div>
+    </div>`).join('');
+
+  const rc = inc.root_cause;
+  $('#evidence').innerHTML = `
+    <div class="mini" style="margin:0 0 10px">Top-scoring signals emitted by <b style="color:#fff">${esc(rc.name)}</b> (metric deviation vs baseline is the strongest evidence).</div>
+    ${rc.signals.map((s,k)=>`
+      <div style="border:1px solid ${k===0?'#7f1d2b':'#1d2b45'};background:${k===0?'rgba(255,77,94,.07)':'#0b1322'};border-radius:9px;padding:10px 12px;margin-bottom:9px">
+        <div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:4px">
+          <span class="mono" style="font-size:10.5px;color:var(--dim2)">${hhmmss(s.ts)} · ${s.event}</span>
+          <span class="mono" style="font-size:10.5px;color:${k===0?'#ff8b96':'#67e8f9'}">anomaly ${s.anomaly_reason?'':''}${s.value!=null?`${s.value}${s.unit||''}`:'log'}</span>
+        </div>
+        <div style="font-size:12px;color:#dbe6f4">${esc(s.message)}</div>
+        ${s.anomaly_reason?`<div class="sub">${esc(s.anomaly_reason)}</div>`:''}
+      </div>`).join('')}`;
+
+  $('#rejected').innerHTML = `<table><thead><tr><th>rank</th><th>service</th><th>score</th><th>why it is not the root cause</th></tr></thead><tbody>
+    ${inc.candidates.slice(1).map(c=>`<tr>
+      <td class="mono">${c.rank}</td>
+      <td>${esc(c.name)} <span class="mono muted">${esc(c.service)}</span></td>
+      <td class="mono">${c.score.toFixed(3)}</td>
+      <td style="font-size:11.5px;color:#a9b9cf">First fires at ${hhmmss(c.earliest)}${c.earliness<0.5?' — after the incident was already underway':''}, explains only ${c.covers_pct}% of the events,
+        and ${c.explains.length? 'covers '+c.explains.length+' downstream services':'covers no downstream service'} — a downstream symptom, not the origin.</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+/* ============================ impact ============================ */
+function renderImpact(){
+  const inc=cur();
+  if(!inc){ $('#impactTable').innerHTML='<div class="empty">—</div>'; $('#bizImpact').innerHTML=''; $('#coinTable').innerHTML=''; return; }
+  const im=inc.impact;
+  $('#impactTable').innerHTML = `<div class="scroll"><table><thead><tr>
+      <th>service</th><th>tier</th><th>crit</th><th>events</th><th>impact</th></tr></thead><tbody>
+    ${im.affected_services.map(a=>`<tr>
+      <td>${esc(a.name)} ${a.service===inc.root_cause.service?'<span class="tag root">root</span>':''}</td>
+      <td><span class="tag">${a.tier}</span></td>
+      <td class="mono">${a.criticality}/5</td>
+      <td class="mono">${a.observed_events}</td>
+      <td><div style="display:flex;align-items:center;gap:7px">
+        <div class="track" style="width:58px"><div class="fill ${a.impact_score>75?'rd':'am'}" style="width:${a.impact_score}%"></div></div>
+        <span class="mono" style="font-size:10.5px">${a.impact_score}</span></div></td>
+    </tr>`).join('')}</tbody></table></div>`;
+
+  $('#bizImpact').innerHTML = `
+    <div class="kpis" style="margin-bottom:12px">
+      <div class="kpi bad"><div class="v">${fmt(im.users_exposed)}</div><div class="l">users exposed</div></div>
+      <div class="kpi warn"><div class="v">${fmt(im.failed_operations_estimate)}</div><div class="l">failed operations</div></div>
+      <div class="kpi warn"><div class="v">₹${fmt(im.revenue_exposure_inr)}</div><div class="l">revenue at risk</div></div>
+      <div class="kpi"><div class="v">${im.duration_minutes}m</div><div class="l">incident duration</div></div>
+    </div>
+    ${im.business_lines.map(b=>`<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #131e31">
+      <span style="flex:0 0 78px;font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--cyan);font-weight:700;padding-top:2px">${esc(b.level)}</span>
+      <span style="font-size:12px;color:#c3d0e2">${esc(b.detail)}</span></div>`).join('')}
+    <div class="mini" style="margin-top:10px">Estimate is deliberately transparent:<br><span class="mono" style="color:#67e8f9">${esc(im.estimate_formula||'')}</span></div>`;
+
+  const co = im.coincidental_services||[];
+  $('#coinTable').innerHTML = co.length ? `<table><thead><tr><th>service</th><th>why excluded</th></tr></thead><tbody>
+      ${co.map(c=>`<tr><td>${esc(c.name)} <span class="mono muted">${esc(c.service)}</span></td>
+        <td style="font-size:11.5px;color:#a9b9cf">${esc(c.reason)}</td></tr>`).join('')}
+    </tbody></table>` : '<div class="empty">Every service that fired is on the dependency path — no coincidences.</div>';
+}
+
+/* ============================ recommendations ============================ */
+function renderRecs(){
+  const inc=cur();
+  if(!inc){ $('#recs').innerHTML='<div class="empty">—</div>'; $('#recovery').innerHTML=''; $('#nRecs').textContent='0'; return; }
+  $('#nRecs').textContent = inc.recommendations.length;
+  $('#recs').innerHTML = inc.recommendations.map(r=>`
+    <div class="rec">
+      <div class="h">
+        <div class="step">${r.step}</div>
+        <div style="flex:1">
+          <div class="a">${esc(r.action)}</div>
+          <div class="d">${esc(r.detail)}</div>
+          <div class="f">
+            <span class="phase ${r.phase}">${r.phase}</span>
+            <span class="tag">effort ${r.effort}</span>
+            <span class="tag">ETA ${r.eta}</span>
+            <span class="tag">risk ${r.risk}</span>
+            <span class="tag" style="color:var(--dim2)">target: ${esc(r.target)}</span>
+          </div>
+          <div class="mini" style="margin-top:6px">Why: ${esc(r.why)}</div>
+        </div>
+      </div>
+    </div>`).join('');
+  $('#recovery').innerHTML = inc.recovery_playbook.map((p,k)=>`
+    <div style="display:flex;gap:11px;padding:9px 0;border-bottom:1px solid #131e31">
+      <span class="mono" style="color:var(--cyan);flex:0 0 20px">${k+1}.</span>
+      <span style="font-size:12.5px;color:#c9d6e8">${esc(p)}</span></div>`).join('');
+}
+
+/* ============================ events ============================ */
+function renderEvents(){
+  const inc=cur();
+  const all = S.data.result.events||[];
+  const scope = inc? inc.events : all;
+  $('#nEvents').textContent = all.length;
+  const sel = $('#fSrc');
+  if(sel.options.length<=1){
+    [...new Set(all.map(e=>e.source))].sort().forEach(s=>{ const o=document.createElement('option'); o.value=s;o.textContent=s; sel.appendChild(o); });
+  }
+  const q=S.q.toLowerCase();
+  const rows = all.filter(e=>{
+    const inScope = inc? scope.some(x=>x.id===e.id) : true;
+    if(!inScope) return false;
+    if(S.fSev && e.severity!==S.fSev) return false;
+    if(S.fSrc && e.source!==S.fSrc) return false;
+    if(q && !(e.message.toLowerCase().includes(q)||e.service.toLowerCase().includes(q)||String(e.trace_id||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+  $('#evTable').innerHTML = rows.length ? `<table><thead><tr>
+      <th>time</th><th>source</th><th>service</th><th>sev</th><th>message</th><th>value</th><th>anomaly</th></tr></thead><tbody>
+    ${rows.map(e=>`<tr>
+      <td class="mono" style="white-space:nowrap">${hhmmss(e.ts)}</td>
+      <td><span class="src">${esc(e.source)}</span></td>
+      <td class="mono">${esc(e.service)}</td>
+      <td><span style="color:${sevColor(e.severity)};font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${e.severity}</span></td>
+      <td style="font-size:11.5px">${esc(e.message)}${e.trace_id?` <span class="mono muted">[${esc(e.trace_id)}]</span>`:''}</td>
+      <td class="mono">${e.value!=null?esc(e.value)+(e.unit||''):'—'}</td>
+      <td><div style="display:flex;align-items:center;gap:6px">
+        <div class="track" style="width:42px"><div class="fill ${e.anomaly>.66?'rd':e.anomaly>.33?'am':'cy'}" style="width:${(e.anomaly*100).toFixed(0)}%"></div></div>
+        <span class="mono" style="font-size:10px">${e.anomaly.toFixed(2)}</span></div></td>
+    </tr>`).join('')}</tbody></table>`
+    : '<div class="empty">No events match the filter.</div>';
+}
+
+/* ============================ render all ============================ */
+function renderAll(){
+  if(!S.data) return;
+  renderChips(); renderSidebar(); renderOverview(); renderTopology();
+  renderTimeline(); renderRootCause(); renderImpact(); renderRecs(); renderEvents();
+}
+
+/* ============================ actions ============================ */
+async function post(url, body){
+  const r = await fetch(url, body? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {method:'POST'});
+  if(!r.ok){ toast('Request failed'); return; }
+  const j = await r.json();
+  await load();
+  return j;
+}
+$('#btnSim').onclick = async ()=>{ $('#btnSim').disabled=true; toast('Ingesting simulated live burst…');
+  try{ const j=await post('/api/ingest/simulate'); toast(`${j.accepted} events → ${j.summary.incidents} incident(s)`);}finally{ $('#btnSim').disabled=false; } };
+$('#btnAppend').onclick = async ()=>{ toast('Appending burst to the live stream…'); await post('/api/ingest/simulate?append=true'); };
+$('#btnReset').onclick = async ()=>{ await post('/api/ingest/simulate?append=false'); toast('Reset to the seeded challenge scenario'); };
+$('#fileIn').onchange = async ev => {
+  const f = ev.target.files[0]; if(!f) return;
+  const fd = new FormData(); fd.append('file', f);
+  toast('Uploading '+f.name+'…');
+  const r = await fetch('/api/ingest/upload', {method:'POST', body:fd});
+  if(!r.ok){ const e = await r.json().catch(()=>({detail:'upload failed'})); toast('⚠ '+e.detail, 3400); return; }
+  const j = await r.json(); await load();
+  toast(`${j.accepted} events parsed (${j.format}) → ${j.summary.incidents} incident(s)`);
+  ev.target.value='';
+};
+$('#btnSample').onclick = async ()=>{
+  const r = await fetch('/api/sample');
+  if(!r.ok){ toast('sample unavailable'); return; }
+  const b = await r.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download='jarvis_sample_events.csv'; a.click();
+  URL.revokeObjectURL(a.href); toast('Sample log downloaded');
+};
+$('#btnExport').onclick = async ()=>{
+  const inc = cur(); if(!inc){ toast('nothing to export'); return; }
+  const r = await fetch(`/api/incidents/${inc.id}/report`);
+  const b = await r.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download=`${inc.id}_jarvis_report.json`; a.click();
+  URL.revokeObjectURL(a.href); toast('Incident report exported');
+};
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  S.tab=t.dataset.t;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.add('hide'));
+  $('#p-'+S.tab).classList.remove('hide');
+});
+$('#q').oninput = e => { S.q=e.target.value; renderEvents(); };
+$('#fSev').onchange = e => { S.fSev=e.target.value; renderEvents(); };
+$('#fSrc').onchange = e => { S.fSrc=e.target.value; renderEvents(); };
+
+load();
+</script>
+</body>
+</html>

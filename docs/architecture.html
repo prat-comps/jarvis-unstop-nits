@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  body{margin:0;background:#0b1120;font-family:-apple-system,"Segoe UI",Roboto,sans-serif;color:#e6edf7;
+       width:1500px;height:900px;overflow:hidden}
+  .wrap{padding:26px 30px}
+  h2{margin:0 0 4px;font-size:22px;letter-spacing:3px}
+  .sub{font-size:11px;letter-spacing:2px;color:#22d3ee;margin-bottom:22px}
+  .row{display:flex;align-items:stretch;gap:14px}
+  .layer{background:#0e1526;border:1px solid #1d2b45;border-radius:12px;padding:14px 15px;flex:1}
+  .layer .lt{font-size:9.5px;letter-spacing:1.6px;color:#8b9cb8;font-weight:700;margin-bottom:11px;text-transform:uppercase}
+  .box{background:#0a1424;border:1px solid #23344e;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11.5px;color:#cddaea}
+  .box b{display:block;color:#fff;font-size:12px;margin-bottom:2px}
+  .box .m{font-size:9.5px;color:#6b7f9c;font-family:monospace}
+  .box.acc{border-color:#0e7490;background:#0b2230}
+  .box.acc b{color:#67e8f9}
+  .box.warn{border-color:#7a5211;background:#231a08}
+  .box.warn b{color:#ffcf7a}
+  .box.bad{border-color:#7f1d2b;background:#2a0a11}
+  .box.bad b{color:#ff8b96}
+  .arrow{align-self:center;color:#22d3ee;font-size:20px;flex:0 0 auto;opacity:.8}
+  .stages{display:flex;gap:9px;margin-top:16px}
+  .st{flex:1;background:linear-gradient(180deg,#111b30,#0b1425);border:1px solid #1d2b45;border-radius:9px;padding:10px 11px}
+  .st .n{font-family:monospace;font-size:9px;color:#22d3ee;letter-spacing:1px}
+  .st .t{font-size:11.5px;font-weight:700;color:#fff;margin:3px 0 4px}
+  .st .d{font-size:9.5px;color:#7d8fac;line-height:1.45}
+  .foot{margin-top:16px;display:flex;gap:12px;font-size:10px;color:#5f718e;align-items:center}
+  .pill{border:1px solid #23344e;border-radius:20px;padding:3px 10px;background:#0d1728;color:#8b9cb8;font-size:9.5px;letter-spacing:.6px}
+</style></head><body><div class="wrap">
+  <h2>J.A.R.V.I.S. — SYSTEM ARCHITECTURE</h2>
+  <div class="sub">SIX-STAGE INCIDENT CORRELATION PIPELINE</div>
+
+  <div class="row">
+    <div class="layer">
+      <div class="lt">1 · Data sources</div>
+      <div class="box"><b>Metrics / APM</b><span class="m">prometheus · traces · 5xx · latency</span></div>
+      <div class="box"><b>Application logs</b><span class="m">stdout · CSV · JSONL · .log</span></div>
+      <div class="box"><b>Alert manager</b><span class="m">pagerduty · webhook alerts</span></div>
+      <div class="box acc"><b>File upload</b><span class="m">drag &amp; drop any log file</span></div>
+    </div>
+    <div class="arrow">➜</div>
+
+    <div class="layer" style="flex:1.15">
+      <div class="lt">2 · Ingestion &amp; normalisation</div>
+      <div class="box"><b>Adapters</b><span class="m">push API · stream sim · file parser</span></div>
+      <div class="box"><b>Canonical event</b><span class="m">ts · service · severity · value · trace_id</span></div>
+      <div class="box"><b>Topology registry</b><span class="m">14 services · dependency graph · criticality</span></div>
+      <div class="box"><b>Signal gate</b><span class="m">warning+ or ≥1.6× baseline</span></div>
+    </div>
+    <div class="arrow">➜</div>
+
+    <div class="layer" style="flex:1.25">
+      <div class="lt">3 · Correlation engine</div>
+      <div class="box acc"><b>Union-Find clustering</b><span class="m">Δt ≤ 4 min + topology + trace + pattern</span></div>
+      <div class="box"><b>Link strength</b><span class="m">0.30 time · 0.35 topo · 0.25 trace · 0.10 pattern</span></div>
+      <div class="box"><b>Semantic guard</b><span class="m">time alone never merges 2 services</span></div>
+      <div class="box warn"><b>Noise suppression</b><span class="m">no critical path + no link → muted</span></div>
+    </div>
+    <div class="arrow">➜</div>
+
+    <div class="layer">
+      <div class="lt">4 · Reasoning</div>
+      <div class="box bad"><b>Root-cause ranking</b><span class="m">earliness · severity · topo · anomaly · amplification</span></div>
+      <div class="box"><b>Impact analysis</b><span class="m">blast radius · criticality · users · ₹</span></div>
+      <div class="box"><b>Timeline builder</b><span class="m">first-seen order · hops from root</span></div>
+      <div class="box"><b>Recommendation</b><span class="m">runbook match by service + failure mode</span></div>
+    </div>
+    <div class="arrow">➜</div>
+
+    <div class="layer">
+      <div class="lt">5 · Presentation</div>
+      <div class="box"><b>Incident dashboard</b><span class="m">7 interactive views</span></div>
+      <div class="box"><b>Dependency graph</b><span class="m">SVG · blast radius · click to inspect</span></div>
+      <div class="box"><b>Incident report</b><span class="m">narrative + JSON export</span></div>
+      <div class="box"><b>REST API</b><span class="m">/api/incidents/{id}/report</span></div>
+    </div>
+  </div>
+
+  <div class="stages">
+    <div class="st"><div class="n">STAGE 1</div><div class="t">Normalise</div><div class="d">One schema for every source; unknown services still parsed, never dropped.</div></div>
+    <div class="st"><div class="n">STAGE 2</div><div class="t">Score</div><div class="d">Anomaly = 0.6·metric deviation + 0.4·severity. Explains every score.</div></div>
+    <div class="st"><div class="n">STAGE 3</div><div class="t">Cluster</div><div class="d">Union-Find over weighted link rules → candidate incidents.</div></div>
+    <div class="st"><div class="n">STAGE 4</div><div class="t">Root cause</div><div class="d">Topology-aware ranking; upstream-most earliest explainer wins.</div></div>
+    <div class="st"><div class="n">STAGE 5</div><div class="t">Impact</div><div class="d">Blast radius, criticality, exposed users, transparent ₹ estimate.</div></div>
+    <div class="st"><div class="n">STAGE 6</div><div class="t">Recommend</div><div class="d">Runbook actions with effort, ETA and risk per step.</div></div>
+  </div>
+
+  <div class="foot">
+    <span class="pill">deterministic &amp; explainable</span>
+    <span class="pill">no model training required</span>
+    <span class="pill">streaming-ready</span>
+    <span class="pill">Python · FastAPI · vanilla JS</span>
+    <span style="margin-left:auto">every number on screen traces back to a rule</span>
+  </div>
+</div></body></html>

@@ -1,0 +1,15 @@
+timestamp,level,service,message,value
+2025-03-14 10:02:14,ERROR,db-host,postgres: could not write to file pg_wal: No space left on device,
+2025-03-14 10:02:41,WARN,db-host,iowait percentage elevated on data volume,88
+2025-03-14 10:04:02,ERROR,db-proxy,pool queue full: 214 clients waiting,
+2025-03-14 10:04:55,ERROR,db-proxy,"server_login_retry exceeded, connection refused",
+2025-03-14 10:06:10,WARN,ledger-db,query p99 latency degraded,2100
+2025-03-14 10:06:38,ERROR,ledger-db,FATAL: remaining connection slots are reserved,
+2025-03-14 10:07:12,ERROR,payment-api,POST /v1/payments -> 503 upstream ledger timeout,7400
+2025-03-14 10:07:44,CRITICAL,payment-api,payment 5xx error rate above threshold,17.2
+2025-03-14 10:08:05,ERROR,auth,Login failed: session write timed out (session-store unavailable),
+2025-03-14 10:08:33,WARN,auth,login failure rate elevated,22.4
+2025-03-14 10:09:20,ERROR,checkout-ui,"payment step failed, showing Try again to user",
+2025-03-14 10:09:58,WARN,psp-connector,psp-connector timeout rate rising,24.0
+2025-03-14 10:03:10,WARN,notification,"email provider returned 429, retrying with backoff",
+2025-03-14 10:05:44,INFO,waf,blocked-request rate within normal range,1.1
