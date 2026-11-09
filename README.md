@@ -20,11 +20,6 @@ pip install -r requirements.txt
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Open **http://localhost:8000**. The challenge scenario is seeded automatically, so the
-dashboard is fully populated on first load. Nothing else is required — no database, no
-model files, no network access.
-
----
 
 ## What it does
 
@@ -89,14 +84,6 @@ Demo controls: *Simulate live burst*, *Append burst*, *Upload logs*, *Download s
 | GET | `/api/health` | Liveness and counters |
 | GET | `/docs` | Interactive OpenAPI documentation |
 
-Try it without the UI:
-
-```bash
-curl -s localhost:8000/api/incidents/INC-112/report | python3 -m json.tool | head -40
-curl -s -F "file=@samples/jarvis_sample_events.csv" localhost:8000/api/ingest/upload
-```
-
----
 
 ## Project layout
 
